@@ -1,48 +1,86 @@
-import subprocess # let us run external program from python
-import time 
-import os # interact with the OS 
+import subprocess  # let us run external program from python
+import time
 import tkinter as tk
 from tkinter import messagebox
 
-def launch_apps():
+FOCUS_SECONDS = 3 * 60 * 60
+BREAK_SECONDS = 60 * 60
+ALARM_SOUND_PATH = "/usr/share/sounds/freedesktop/stereo/alarm-clock-elapsed.oga"
+ALARM_REPEAT_COUNT = 3
+
+def launch_startup_applications():
     """Launch the desired application when PC is turned on"""
     apps = [
         "code",
-        "brave https://open.spotify.com/?flow_ctx=3483a5d1-d242-4908-9695-fbb858259dfe%3A1789760722",
-        "brave https://blackboard.salford.ac.uk/ultra/course", 
-        "gnome-terminal"
+        "brave-browser https://open.spotify.com/",
+        "brave-browser https://blackboard.salford.ac.uk/ultra/course",
+        "gnome-terminal",
     ]
 
-    # Launch each application
     for app in apps:
         try:
             subprocess.Popen(app, shell=True)
             print(f"Launched {app}")
             time.sleep(1)
-        except Exception as e:
-            print("Failed to lanuch {app}")
+        except Exception as error:
+            print(f"Failed to launch {app}: {error}")
 
-    # Launch two our focus timer 
-    launch_python_timer()
+    start_focus_timer_window()
 
-def launch_python_timer():
-    """Two hour timer with 15 min break and restart prompt"""
-    
-    def run_focus_session():
-        "Run two hour focus session"
-        
-        root = tk.Tk()
-        root.title("YO MAN YOU READY? LET'S FOCUS FOR 2 FREAKING HOUR")
-        root.geometry("1920x800")
-        root.configure(bg="#2c3e51")
+def formatSecondsAsClockText(total_seconds):
+    """Return seconds as HH:MM:SS"""
+    hours, remainder = divmod(total_seconds, 3600)
+    minutes, seconds = divmod(remainder, 60)
+    return f"{hours:02d}:{minutes:02d}:{seconds:02d}"
 
-        time_left = 2 * 60 * 60 # Two hours in second? 
-        
-        label = tk.Label(root, text="", font=("Arial", 54, "bold"), fg="#3498db", bg="#2c3e50")
-        label.pack(pady=20) # make the label visible and pady means padding on the y axis 
+def playAlarmSoundRepeatedly(repeat_count=ALARM_REPEAT_COUNT):
+    """Play the system alarm sound a number of times"""
+    for _ in range(repeat_count):
+        try:
+            subprocess.run(["paplay", ALARM_SOUND_PATH], check=True)
+        except Exception as error:
+            print(f"Failed to play alarm sound: {error}")
+            return
 
-        status = tk.Label(root, text="Focus Time", font=("Arial", 24), fg="#27ae60", bg="#2c3e50")
-        status.pack()
+def start_focus_timer_window():
+    """Three hour focus session, 15 minute break, then a restart prompt"""
+    root = tk.Tk()
+    root.title("Focus Session")
+    root.geometry("900x400")
+    root.configure(bg="#2c3e50")
 
-        
+    clock_label = tk.Label(root, text="", font=("Arial", 54, "bold"), fg="#3498db", bg="#2c3e50")
+    clock_label.pack(pady=20)
 
+    status_label = tk.Label(root, text="Focus Time", font=("Arial", 24), fg="#27ae60", bg="#2c3e50")
+    clock_label.pack(pady=20)
+
+    status_label = tk.Label(root, text="Focus Time", font=("Arial", 24), fg="#27ae60", bg="#2c3e50")
+    status_label.pack()
+
+    def countdown_then_call(seconds_left, on_finished):
+        clock_label.config(text=formatSecondsAsClockText(seconds_left))
+        if seconds_left <= 0:
+            on_finished()
+            return
+        root.after(1000, countdown_then_call, seconds_left - 1, on_finished)
+
+    def start_break_countdown():
+        status_label.config(text="Break Time", fg="#e67e22")
+        playAlarmSoundRepeatedly()
+        messagebox.showinfo("Focus complete", "Three hours done. Take a 1 hour break.")
+        countdown_then_call(BREAK_SECONDS, ask_to_restart_focus_session)
+
+    def ask_to_restart_focus_session():
+        playAlarmSoundRepeatedly()
+        wants_another = messagebox.askyesno("Break over", "Start another 3 hour focus session?")
+        if wants_another:
+            status_label.config(text="Focus Time", fg="#27ae60")
+            countdown_then_call(FOCUS_SECONDS, start_break_countdown)
+        else:
+            root.destroy()
+    countdown_then_call(FOCUS_SECONDS, start_break_countdown)
+    root.mainloop()
+
+if __name__ == "__main__":
+    launch_startup_applications()

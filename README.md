@@ -3,15 +3,51 @@
 
 # Task to be implemented 
 ## 1. Startup Application Launcher
-A script that automatically runs when the PC starts up to open:
+
+A script that runs automatically when the PC starts up and opens:
+
 - VS Code
 - Spotify
 - Blackboard
 - Terminal
-- 2-hour focus timer
+- Focus timer (3-hour session, 1-hour break, with an audible alarm at the end of each)
 
 **Purpose:** Save time during project setup and minimize distractions.
 
+### Configuration
+
+Create the autostart entry:
+
+```bash
+mkdir -p ~/.config/autostart
+code ~/.config/autostart/startup-launcher.desktop
+
+Paste the following into the file:
+
+[Desktop Entry]
+Type=Application
+Name=Startup Application Launcher
+Exec=python3 /home/sujon/Final-Portfolio-Projects/automation-is-the-future/startup-application-launcher/startup_launcher.py
+X-GNOME-Autostart-enabled=true
+X-GNOME-Autostart-Delay=10
+
+Mark it executable:
+
+chmod +x ~/.config/autostart/startup-launcher.desktop
+
+X-GNOME-Autostart-Delay=10 holds the launch for ten seconds after login so the desktop session is ready before the applications start.
+
+Testing
+
+Run the script directly rather than rebooting:
+
+python3 startup-application-launcher/startup_launcher.py
+
+To exercise the timer without waiting three hours, temporarily lower the constants at the top of the script:
+
+FOCUS_SECONDS = 10
+BREAK_SECONDS = 5
+```
 ---
 
 ## 2. Football Match Reminders
